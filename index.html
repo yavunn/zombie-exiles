@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zombie Exiles</title>
+
+  <meta name="description" content="HTML5 Canvas ve saf JavaScript ile geliştirilmiş hayatta kalma + quiz oyunu. Barikatını savun, soruları doğru cevapla, silahını güçlendir." />
+  <meta name="theme-color" content="#05070d" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- Bağlantı paylaşıldığında görünen önizleme bilgileri -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Zombie Exiles" />
+  <meta property="og:description" content="Quiz cevapları savaş alanını değiştirir. Doğru cevap silahını güçlendirir, yanlış cevap takviye zombi getirir." />
+
+  <!-- Ek dosya gerektirmeyen, satır içi SVG favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2305070d'/%3E%3Ctext y='.9em' x='50%25' text-anchor='middle' font-size='72'%3E%E2%98%A3%3C/text%3E%3C/svg%3E" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <span class="logo-mark">☣</span>
+        <strong>Zombie Exiles</strong>
+      </div>
+      <div class="topbar-actions">
+        <button id="archiveButton" class="ghost-button" type="button">Zombi Arşivi</button>
+        <button id="helpButton" class="ghost-button" type="button">Yardım / Rehber</button>
+      </div>
+    </header>
+
+    <main class="game-shell">
+      <section class="hud-panel" aria-label="Oyun bilgileri">
+        <div class="hud-card hero-card">
+          <span class="label">Oyuncu</span>
+          <strong id="hudName">-</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">Skor</span>
+          <strong id="scoreText">0</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">En İyi</span>
+          <strong id="bestText">0</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">Dalga</span>
+          <strong id="waveText">1</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">Silah</span>
+          <strong id="weaponText">Lv. 1</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">Tehdit</span>
+          <strong id="timerText">%0</strong>
+        </div>
+      </section>
+
+      <section class="canvas-wrap">
+        <canvas id="gameCanvas" width="1280" height="630" aria-label="Zombie Exiles oyun alanı"></canvas>
+        <div class="health-wrap" aria-label="Barikat canı">
+          <span>Barikat</span>
+          <div class="health-track"><div id="healthFill" class="health-fill"></div></div>
+          <strong id="healthText">100</strong>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="mission-card">
+          <h2>Görev</h2>
+          <p>Barikat sağlığı sıfırlanana kadar hayatta kal. Quiz soruları geldiğinde savaş donar; doğru cevapla silahını güçlendir, yanlışta dışarıdan takviye zombiler gelir.</p>
+        </div>
+        <div class="mission-card small">
+          <h3>Kontroller</h3>
+          <p><kbd>←</kbd> <kbd>→</kbd> veya <kbd>A</kbd> <kbd>D</kbd>: karakteri hareket ettir<br><kbd>P</kbd>: duraklat / devam ettir</p>
+        </div>
+        <div class="mission-card small">
+          <h3>Quiz Etkisi</h3>
+          <p><strong>Doğru:</strong> silah güçlenir, kombo artar, zombiler hasar alır.<br><strong>Yanlış:</strong> kombo sıfırlanır, zombiler biraz yaklaşır ve ekran dışından takviye zombi gelir; ceza zorluğa göre dengelenir.</p>
+        </div>
+        <div class="mission-card small zombie-summary-card">
+          <h3>Zombi Türleri</h3>
+          <div class="zombie-list compact">
+            <span><strong>Temel</strong><em>Yürüyen · Koşucu</em></span>
+            <span><strong>Dayanıklı</strong><em>Tank · Zırhlı</em></span>
+            <span><strong>Özel</strong><em>Toksik · Asitçi</em></span>
+            <span><strong>Tehdit</strong><em>Avcı · Patlayıcı</em></span>
+          </div>
+          <button id="archiveButtonInline" class="mini-link-button" type="button">Detaylı arşivi aç</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="startOverlay" class="overlay active">
+    <div class="modal start-modal">
+      <div class="badge">HTML • CSS • JavaScript • Canvas • 211 Soru • Exiles</div>
+      <h1>Zombie Exiles</h1>
+      <p class="subtitle">Quiz cevapları savaş alanını değiştirir. Soru açıldığında oyun tamamen donar; doğru cevap silahını güçlendirir, yanlış cevap dışarıdan takviye zombi getirir.</p>
+
+      <form id="startForm" class="start-form">
+        <label>
+          Oyuncu adı
+          <input id="playerName" type="text" maxlength="16" placeholder="Örn: Peter" autocomplete="off" />
+        </label>
+
+        <label>
+          Zorluk
+          <select id="difficultySelect">
+            <option value="normal">Normal - Dengeli hayatta kalma</option>
+            <option value="easy">Kolay - Rahat öğrenme modu</option>
+            <option value="hard">Zor - Sert ama geçilebilir</option>
+          </select>
+        </label>
+
+        <label>
+          Karakter rengi
+          <select id="colorSelect">
+            <option value="#00f5ff">Siyan Neon</option>
+            <option value="#b6ff00">Asit Yeşili</option>
+            <option value="#ff4fd8">Magenta</option>
+            <option value="#ffd166">Amber</option>
+          </select>
+        </label>
+
+        <button class="primary-button" type="submit">Oyunu Başlat</button>
+        <p id="formError" class="form-error" role="alert"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="quizOverlay" class="quiz-overlay" aria-live="polite">
+    <div class="quiz-card">
+      <div class="quiz-topline">
+        <span id="questionCategory">Genel Kültür</span>
+        <span id="quizTimer">10</span>
+      </div>
+      <h2 id="questionText">Soru burada görünecek</h2>
+      <div id="answerButtons" class="answers"></div>
+    </div>
+  </div>
+
+  <div id="endOverlay" class="overlay">
+    <div class="modal end-modal">
+      <h2 id="endTitle">Oyun Bitti</h2>
+      <p id="endSummary"></p>
+      <div class="result-grid">
+        <div><span>Skor</span><strong id="finalScore">0</strong></div>
+        <div><span>Dalga</span><strong id="finalWave">1</strong></div>
+        <div><span>Silah</span><strong id="finalWeapon">1</strong></div>
+        <div><span>Doğru / Yanlış</span><strong id="finalQuiz">0 / 0</strong></div>
+      </div>
+      <div id="reviewBox" class="review-box"></div>
+      <button id="restartButton" class="primary-button" type="button">Tekrar Oyna</button>
+    </div>
+  </div>
+
+  <div id="helpOverlay" class="overlay">
+    <div class="modal help-modal">
+      <button id="closeHelp" class="close-button" type="button" aria-label="Yardımı kapat">×</button>
+      <h2>Yardım / Rehber</h2>
+      <ol>
+        <li>Oyuncu adı ve zorluk seçerek oyuna başla.</li>
+        <li>Karakter otomatik ateş eder; sen sadece barikat önünde sağ-sol hareket edersin.</li>
+        <li>Belirli aralıklarla quiz sorusu çıkar. Soru ekranı açıkken süre, zombiler, mermiler ve dalga ilerlemesi tamamen durur.</li>
+        <li>Doğru cevap silah seviyesini ve komboyu artırır; yanlış cevap veya soru süresinin bitmesi ekran dışından takviye zombi getirir.</li>
+        <li>Yürüyen, Koşucu, Sürüngen, Tank, Zırhlı, Toksik, Asitçi, Avcı ve Patlayıcı gibi farklı zombi türleri ilerleyen dalgalarda ortaya çıkar.</li>
+        <li>Oyun süreyle bitmez; barikat canı sıfırlanana kadar devam eder.</li>
+      </ol>
+      <p class="tip">Bu proje dış görsel kullanmaz; karakter, zombi türleri, arka plan, mermi ve efektler JavaScript Canvas ile çizilir. Soru havuzu yüklenen Web Ara Sınav PDF konularına göre genişletilmiştir.</p>
+    </div>
+  </div>
+
+
+  <div id="archiveOverlay" class="overlay">
+    <div class="modal archive-modal">
+      <button id="closeArchive" class="close-button" type="button" aria-label="Zombi arşivini kapat">×</button>
+      <h2>Zombi Arşivi</h2>
+      <p class="subtitle">Zombiler dört gruba ayrıldı. Böylece hem oyun içi tehditler daha anlaşılır, hem de tanıtım videosunda tür sistemi daha profesyonel anlatılır.</p>
+      <div class="archive-section">
+        <h3>Temel Sürü</h3>
+        <div class="archive-grid">
+          <article data-type="basic"><b>01</b><strong>Yürüyen</strong><span>Dengeli temel zombi. İlk dalgalarda oyuncuya ritmi öğretir.</span></article>
+          <article data-type="speed"><b>02</b><strong>Koşucu</strong><span>Az canlı ama hızlıdır. Boş bırakılırsa barikata çabuk ulaşır.</span></article>
+          <article data-type="speed"><b>03</b><strong>Sürüngen</strong><span>Düşük silüeti ve zikzak hissiyle nişan çizgisini bozar.</span></article>
+        </div>
+      </div>
+      <div class="archive-section">
+        <h3>Ağır Tehditler</h3>
+        <div class="archive-grid">
+          <article data-type="tank"><b>04</b><strong>Tank</strong><span>Yavaş ilerler ama yüksek canıyla mermi baskısını emer.</span></article>
+          <article data-type="tank"><b>05</b><strong>Zırhlı</strong><span>En dayanıklı türlerden biridir. İleri dalgalarda alan kontrolünü zorlaştırır.</span></article>
+        </div>
+      </div>
+      <div class="archive-section">
+        <h3>Özel Mutasyonlar</h3>
+        <div class="archive-grid">
+          <article data-type="toxic"><b>06</b><strong>Toksik</strong><span>Öldüğünde çevresindeki zombileri zayıflatır; doğru zamanda vurulursa avantaj sağlar.</span></article>
+          <article data-type="acid"><b>07</b><strong>Asitçi</strong><span>Barikata ulaşmadan uzaktan küçük ama düzenli hasar verebilir.</span></article>
+          <article data-type="hunter"><b>08</b><strong>Avcı</strong><span>Yanlara kırılarak ilerler. Tek çizgide ateş etmeyi daha riskli hale getirir.</span></article>
+          <article data-type="exploder"><b>09</b><strong>Patlayıcı</strong><span>Öldüğünde alan etkisi yaratır; barikata ulaşırsa ağır hasar verir.</span></article>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
